@@ -2,16 +2,17 @@ const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
+const { validate } = require('../middleware/validate');
+const { createJobSchema } = require('../validation/jobSchema');
 
-// In-memory store for now; will be replaced with PostgreSQL
+// In-memory store; will be replaced with PostgreSQL
 const jobs = {};
 
 /**
  * POST /api/v1/replay/jobs
- * Create a new replay job
  */
-router.post('/', async (req, res) => {
-  const { name, sourceTable, startDate, endDate, customerId } = req.body;
+router.post('/', validate(createJobSchema), async (req, res) => {
+  const { name, sourceTable, startDate, endDate, customerId, priority } = req.body;
 
   const job = {
     id: uuidv4(),
@@ -20,6 +21,7 @@ router.post('/', async (req, res) => {
     startDate,
     endDate,
     customerId: customerId || null,
+    priority,
     status: 'pending',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
