@@ -4,69 +4,51 @@ const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
 const { validate } = require('../middleware/validate');
 const { createJobSchema } = require('../validation/jobSchema');
-
-// In-memory store; will be replaced with PostgreSQL
-const jobs = {};
+const JobStore = require('../db/jobStore');
 
 /**
  * POST /api/v1/replay/jobs
  */
-router.post('/', validate(createJobSchema), async (req, res) => {
-  const { name, sourceTable, startDate, endDate, customerId, priority } = req.body;
-
-  const job = {
-    id: uuidv4(),
-    name,
-    sourceTable,
-    startDate,
-    endDate,
-    customerId: customerId || null,
-    priority,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-
-  jobs[job.id] = job;
-  logger.info('Job created', { jobId: job.id, name });
-
-  res.status(201).json(job);
+router.post('/', validate(createJobSchema), async (req, res, next) => {
+  try {
+    const { name, sourceTable, startDate, endDate, customerId, priority } = req.body;
+    const job = await JobStore.create({
+      id: uuidv4(),
+      name, sourceTable, startDate, endDate,
+      customerId: customerId || null,
+      priority
+    });
+    logger.info('Job created', { jobId: job.id });
+    res.status(201).json(job);
+  } catch (err) {
+    next(err);
+  }
 });
 
 /**
  * GET /api/v1/replay/jobs
- * List jobs with optional filtering by status
  */
-router.get('/', (req, res) => {
-  const { status, limit = 50, offset = 0 } = req.query;
-
-  let list = Object.values(jobs);
-
-  if (status) {
-    list = list.filter(j => j.status === status);
+router.get('/', async (req, res, next) => {
+  try {
+    const { status, limit = 50, offset = 0 } = req.query;
+    const jobs = await JobStore.list({ status, limit: Number(limit), offset: Number(offset) });
+    res.json({ jobs });
+  } catch (err) {
+    next(err);
   }
-
-  // Sort by createdAt desc
-  list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-  const total = list.length;
-  const page = list.slice(Number(offset), Number(offset) + Number(limit));
-
-  res.json({
-    total,
-    limit: Number(limit),
-    offset: Number(offset),
-    jobs: page
-  });
 });
 
 /**
  * GET /api/v1/replay/jobs/:id
  */
-router.get('/:id', (req, res) => {
-  const job = jobs[req.params.id];
-  if (!job) return res.status(404).json({ error: 'Job not found' });
-  res.json(job);
+router.get('/:id', async (req, res, next) => {
+  try {
+    const job = await JobStore.findById(req.params.id);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    res.json(job);
+  } catch (err) {
+    next(err);
+  }
 });
 
-module.exports = { router, jobs };
+module.exports = { router };
