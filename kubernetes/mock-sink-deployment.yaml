@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mock-sink
+  namespace: replay-demo
+  labels:
+    app: mock-sink
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mock-sink
+  template:
+    metadata:
+      labels:
+        app: mock-sink
+    spec:
+      containers:
+        - name: mock-sink
+          image: disaster-recovery-replay:1.0.0
+          imagePullPolicy: IfNotPresent
+          command: ["java", "-cp", "app.jar", "com.crowdstrike.dr.replay.sink.MockRestSink"]
+          ports:
+            - containerPort: 8081
+              name: http
+          env:
+            - name: MOCK_SINK_PORT
+              value: "8081"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-sink
+  namespace: replay-demo
+spec:
+  selector:
+    app: mock-sink
+  ports:
+    - port: 8081
+      targetPort: 8081
+      name: http
+  type: ClusterIP

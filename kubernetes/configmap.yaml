@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: replay-config
+  namespace: replay-demo
+data:
+  ICEBERG_WAREHOUSE: "file:///data/warehouse"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka.replay-demo.svc.cluster.local:9092"
+  REST_DESTINATION_BASE_URL: "http://mock-sink.replay-demo.svc.cluster.local:8081"
+  PORT: "8080"

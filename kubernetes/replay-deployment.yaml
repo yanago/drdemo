@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: replay-service
+  namespace: replay-demo
+  labels:
+    app: replay-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: replay-service
+  template:
+    metadata:
+      labels:
+        app: replay-service
+    spec:
+      containers:
+        - name: replay-service
+          image: disaster-recovery-replay:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - configMapRef:
+                name: replay-config
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: replay-service
+  namespace: replay-demo
+spec:
+  selector:
+    app: replay-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+  type: ClusterIP
