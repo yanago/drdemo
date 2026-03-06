@@ -33,4 +33,40 @@ router.post('/', validate(createJobSchema), async (req, res) => {
   res.status(201).json(job);
 });
 
+/**
+ * GET /api/v1/replay/jobs
+ * List jobs with optional filtering by status
+ */
+router.get('/', (req, res) => {
+  const { status, limit = 50, offset = 0 } = req.query;
+
+  let list = Object.values(jobs);
+
+  if (status) {
+    list = list.filter(j => j.status === status);
+  }
+
+  // Sort by createdAt desc
+  list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const total = list.length;
+  const page = list.slice(Number(offset), Number(offset) + Number(limit));
+
+  res.json({
+    total,
+    limit: Number(limit),
+    offset: Number(offset),
+    jobs: page
+  });
+});
+
+/**
+ * GET /api/v1/replay/jobs/:id
+ */
+router.get('/:id', (req, res) => {
+  const job = jobs[req.params.id];
+  if (!job) return res.status(404).json({ error: 'Job not found' });
+  res.json(job);
+});
+
 module.exports = { router, jobs };
