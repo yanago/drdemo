@@ -1,5 +1,6 @@
 const express = require('express');
 const logger = require('./utils/logger');
+const { router: replayJobsRouter } = require('./routes/replayJobs');
 
 const app = express();
 app.use(express.json());
@@ -8,6 +9,9 @@ app.use(express.json());
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '0.1.0' });
 });
+
+// API routes
+app.use('/api/v1/replay/jobs', replayJobsRouter);
 
 // 404 handler
 app.use((req, res) => {
